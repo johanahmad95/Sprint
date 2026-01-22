@@ -1,26 +1,472 @@
 @import "tailwindcss";
 
+/* ============================================
+   SPRINT - 3D SPORTS COURT BOOKING PLATFORM
+   Design System: Claymorphism + Glassmorphism
+   ============================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Primary Palette */
+  --tomato: #F06038;
+  --tomato-light: #F4816A;
+  --tomato-dark: #D94E2A;
+  
+  --vista-blue: #8C9EFF;
+  --vista-blue-light: #A8B5FF;
+  --vista-blue-dark: #6B7FE8;
+  
+  --chartreuse: #D6F74C;
+  --chartreuse-light: #E3FA7A;
+  --chartreuse-dark: #C2E030;
+  
+  --apricot: #FCD9BE;
+  --apricot-light: #FDE8D8;
+  --apricot-dark: #F5C49E;
+  
+  /* Neutral Palette */
+  --white: #FFFFFF;
+  --cream: #FDF9F5;
+  --gray-50: #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #D1D5DB;
+  --gray-400: #9CA3AF;
+  --gray-500: #6B7280;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --gray-800: #1F2937;
+  --gray-900: #111827;
+  
+  /* Accent Colors */
+  --teal-dark: #0D4D4D;
+  --teal-medium: #1A6B6B;
+  --forest: #1B4332;
+  
+  /* Shadcn UI Variables */
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 15 80% 58%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 15 80% 58%;
+  --radius: 0.5rem;
+  
+  /* Shadows for 3D Effects */
+  --shadow-clay: 
+    8px 8px 16px rgba(0, 0, 0, 0.08),
+    -4px -4px 12px rgba(255, 255, 255, 0.9);
+  
+  --shadow-clay-hover: 
+    12px 12px 24px rgba(0, 0, 0, 0.12),
+    -6px -6px 16px rgba(255, 255, 255, 0.95);
+  
+  --shadow-clay-pressed:
+    inset 4px 4px 8px rgba(0, 0, 0, 0.08),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.7);
+  
+  --shadow-glass:
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 12px 24px -8px rgba(0, 0, 0, 0.15);
+  
+  --shadow-float:
+    0 20px 40px -8px rgba(0, 0, 0, 0.2),
+    0 8px 16px -4px rgba(0, 0, 0, 0.1);
+  
+  --shadow-glow-tomato: 0 0 30px rgba(240, 96, 56, 0.4);
+  --shadow-glow-chartreuse: 0 0 20px rgba(214, 247, 76, 0.6);
+  --shadow-glow-vista: 0 0 25px rgba(140, 158, 255, 0.4);
+  
+  /* Background */
+  --background: var(--cream);
+  --foreground: var(--gray-800);
+  
+  /* Font */
+  --font-sans: var(--font-plus-jakarta), system-ui, sans-serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-plus-jakarta);
+  
+  /* Custom Colors */
+  --color-tomato: var(--tomato);
+  --color-tomato-light: var(--tomato-light);
+  --color-tomato-dark: var(--tomato-dark);
+  --color-vista-blue: var(--vista-blue);
+  --color-vista-blue-light: var(--vista-blue-light);
+  --color-vista-blue-dark: var(--vista-blue-dark);
+  --color-chartreuse: var(--chartreuse);
+  --color-chartreuse-light: var(--chartreuse-light);
+  --color-chartreuse-dark: var(--chartreuse-dark);
+  --color-apricot: var(--apricot);
+  --color-apricot-light: var(--apricot-light);
+  --color-apricot-dark: var(--apricot-dark);
+  --color-teal-dark: var(--teal-dark);
+  --color-teal-medium: var(--teal-medium);
+  --color-forest: var(--forest);
+  --color-cream: var(--cream);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+/* ============================================
+   CLAYMORPHISM UTILITIES
+   Soft, tactile 3D elements
+   ============================================ */
+
+.clay-card {
+  background: linear-gradient(145deg, #ffffff, #f5f5f5);
+  border-radius: 24px;
+  box-shadow: var(--shadow-clay);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.clay-card:hover {
+  box-shadow: var(--shadow-clay-hover);
+  transform: translateY(-2px);
+}
+
+.clay-button {
+  background: linear-gradient(145deg, var(--tomato-light), var(--tomato));
+  border-radius: 50px;
+  box-shadow: 
+    6px 6px 12px rgba(0, 0, 0, 0.15),
+    -3px -3px 8px rgba(255, 255, 255, 0.3),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.4);
+  color: white;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.clay-button:hover {
+  box-shadow: 
+    8px 8px 16px rgba(0, 0, 0, 0.18),
+    -4px -4px 10px rgba(255, 255, 255, 0.35),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.5),
+    var(--shadow-glow-tomato);
+  transform: translateY(-2px);
+}
+
+.clay-button:active {
+  box-shadow: var(--shadow-clay-pressed);
+  transform: translateY(0);
+}
+
+.clay-input {
+  background: linear-gradient(145deg, #f0f0f0, #ffffff);
+  border-radius: 16px;
+  box-shadow: 
+    inset 3px 3px 6px rgba(0, 0, 0, 0.06),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.clay-input:focus {
+  box-shadow: 
+    inset 3px 3px 6px rgba(0, 0, 0, 0.08),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+    0 0 0 3px rgba(140, 158, 255, 0.3);
+  outline: none;
+}
+
+/* ============================================
+   GLASSMORPHISM UTILITIES
+   Frosted glass effect
+   ============================================ */
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 24px;
+  box-shadow: var(--shadow-glass);
+}
+
+.glass-card-dark {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  box-shadow: var(--shadow-glass);
+}
+
+.glass-nav {
+  background: rgba(140, 158, 255, 0.15);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(140, 158, 255, 0.2);
+}
+
+/* ============================================
+   3D TILT EFFECT FOR CARDS
+   ============================================ */
+
+.tilt-card {
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tilt-card:hover {
+  transform: perspective(1000px) rotateX(2deg) rotateY(-2deg) translateY(-8px);
+}
+
+/* ============================================
+   BADGE STYLES
+   ============================================ */
+
+.badge-glow {
+  background: var(--chartreuse);
+  color: var(--gray-800);
+  border-radius: 50px;
+  box-shadow: var(--shadow-glow-chartreuse);
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+}
+
+.badge-sport {
+  background: linear-gradient(135deg, var(--teal-dark), var(--teal-medium));
+  color: white;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================
+   HERO BACKGROUND TRANSITIONS
+   ============================================ */
+
+.hero-bg {
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-bg-enter {
+  opacity: 0;
+}
+
+.hero-bg-enter-active {
+  opacity: 1;
+}
+
+.hero-bg-exit {
+  opacity: 1;
+}
+
+.hero-bg-exit-active {
+  opacity: 0;
+}
+
+/* ============================================
+   COURT INDICATOR STYLES
+   ============================================ */
+
+.court-indicator {
+  opacity: 0.6;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.court-indicator:hover {
+  opacity: 0.9;
+}
+
+.court-indicator.active {
+  opacity: 1;
+  text-shadow: var(--shadow-glow-chartreuse);
+}
+
+.court-indicator.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--chartreuse);
+  border-radius: 2px;
+  box-shadow: var(--shadow-glow-chartreuse);
+}
+
+/* ============================================
+   PRICING CARD ELEVATIONS
+   ============================================ */
+
+.pricing-card {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pricing-card-premium {
+  transform: scale(1.05) translateY(-10px);
+  z-index: 10;
+}
+
+.pricing-card-premium::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, var(--chartreuse), var(--vista-blue));
+  border-radius: 26px;
+  z-index: -1;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: var(--shadow-glow-chartreuse);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(214, 247, 76, 0.8);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.6s ease-out forwards;
+}
+
+/* Stagger animations */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+@media (max-width: 768px) {
+  .clay-card {
+    border-radius: 16px;
+  }
+  
+  .glass-card {
+    border-radius: 16px;
+  }
+  
+  .tilt-card:hover {
+    transform: none;
+  }
+  
+  .pricing-card-premium {
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--gray-100);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--vista-blue);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--vista-blue-dark);
+}
+
+/* ============================================
+   SHADCN UI ANIMATIONS
+   ============================================ */
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+.animate-accordion-down {
+  animation: accordion-down 0.2s ease-out;
+}
+
+.animate-accordion-up {
+  animation: accordion-up 0.2s ease-out;
+}
+
+/* Hide scrollbar for sport filter */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
