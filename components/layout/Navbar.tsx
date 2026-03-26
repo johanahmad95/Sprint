@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Home, LayoutGrid, Calendar, FileText } from 'lucide-react';
+import { Home, LayoutGrid, Calendar } from 'lucide-react';
 import { NavBar } from '@/components/ui/tubelight-navbar';
 import { createClient } from '@/lib/supabase/client';
 
@@ -49,19 +49,16 @@ const Navbar = () => {
   // MyBooking item (only for logged-in users)
   const myBookingItem = { name: 'MyBooking', url: '/bookings', icon: Calendar };
 
-  // Blog item (always visible)
-  const blogItem = { name: 'Blog', url: '/blog', icon: FileText };
-
   // Combine navigation items - include MyBooking only if user is logged in
   const navItems = [
     ...baseNavItems,
     ...(user ? [myBookingItem] : []),
-    blogItem,
   ];
 
   const logo = {
-    text: 'Sprint',
+    text: 'Sprinto',
     url: '/',
+    image: '/sprinto-logo.png?v=3',
   };
 
   const auth = {

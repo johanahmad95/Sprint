@@ -12,6 +12,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -41,7 +42,9 @@ export default function LoginPage() {
         return;
       }
 
-      const supabase = createClient();
+      // Use localStorage if "Remember Me" is checked, otherwise sessionStorage
+      const storage = rememberMe ? window.localStorage : window.sessionStorage;
+      const supabase = createClient(storage);
 
       // Sign in the user
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -121,7 +124,12 @@ export default function LoginPage() {
 
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 rounded border-gray-300" />
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded border-gray-300"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
                 <span className="text-gray-600">Remember me</span>
               </label>
               <Link href="/forgot-password" className="text-tomato hover:text-tomato-dark font-medium">

@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Booking, BookingStatus } from '@/lib/types';
 import { Navbar, Footer } from '@/components/layout';
 import { Calendar, MapPin, Clock, Users, X, CheckCircle, XCircle, AlertCircle, ArrowLeft, Home } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 
-interface BookingWithDetails extends Booking {
+interface BookingWithDetails extends Omit<Booking, 'court' | 'venue'> {
   court: {
     id: string;
     name: string;
@@ -18,15 +20,30 @@ interface BookingWithDetails extends Booking {
     name: string;
     address: string;
     area: string;
+    location?: string;
   };
+  venues?: { name: string; address?: string };
+  /** Court + venue display (address from joined venues table) */
+  courts?: { venue_name?: string; address?: string };
 }
 
-export default function BookingsPage() {
+type BookingsPageProps = {
+  params?: Promise<{ id?: string }>;
+};
+
+export default function BookingsPage({ params }: BookingsPageProps) {
+  const resolvedParams = React.use(params ?? Promise.resolve({})) as { id?: string };
+  const id = resolvedParams?.id;
   const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const [error, setError] = useState<string | null>(null);
-  
+  const [bookingToCancel, setBookingToCancel] = useState<string | null>(null);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+  const lastFailedBookingIdRef = useRef<string | null>(null);
+
   // Check if Supabase is configured
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     return (
@@ -88,12 +105,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key`}
         return;
       }
 
-      // Fetch bookings with court and venue details
-      const { data, error } = await supabase
+      // Step 1: Fetch bookings with courts only (no nested venues to avoid "more than one relationship")
+      const { data: bookingsData, error } = await supabase
         .from('bookings')
         .select(`
           *,
-          court:courts (
+          courts!court_id (
             id,
             name,
             sport,
@@ -106,18 +123,30 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key`}
 
       if (error) throw error;
 
-      // Fetch venue details for each booking
-      const venueIds = [...new Set((data || []).map((b: any) => b.court?.venue_id).filter(Boolean))];
-      const { data: venuesData } = await supabase
-        .from('venues')
-        .select('id, name, address, area')
-        .in('id', venueIds);
+      const rows = (bookingsData ?? []) as any[];
+      const venueIds = [...new Set(rows.map((b) => (b.courts?.venue_id ?? b.venue_id) as string).filter(Boolean))] as string[];
 
-      const venuesMap = new Map((venuesData || []).map((v: any) => [v.id, v]));
+      // Step 2: Fetch venue name and address by venue_id (separate query, no join ambiguity)
+      let venueById = new Map<string, { name: string; address: string }>();
+      if (venueIds.length > 0) {
+        const { data: venuesData } = await supabase
+          .from('venues')
+          .select('id, name, address')
+          .in('id', venueIds);
+        (venuesData ?? []).forEach((v: any) => {
+          venueById.set(v.id, { name: v.name ?? '', address: v.address ?? '' });
+        });
+      }
 
-      // Transform the data to match our Booking interface
-      const transformedBookings: BookingWithDetails[] = (data || []).map((booking: any) => {
-        const venue = venuesMap.get(booking.court?.venue_id);
+      const transformedBookings: BookingWithDetails[] = rows.map((booking: any) => {
+        const c = booking.courts ?? booking.court_id;
+        const venueId = (typeof c === 'object' && c?.venue_id) ? c.venue_id : (booking.venue_id ?? '');
+        const venueInfo = venueById.get(venueId) ?? { name: 'Unknown Venue', address: '' };
+        const venueName = venueInfo.name || 'Unknown Venue';
+        const venueAddress = venueInfo.address ?? '';
+        const courtId = (typeof c === 'object' && c?.id) ? c.id : '';
+        const courtName = (typeof c === 'object' && c?.name) ? c.name : 'Unknown Court';
+        const courtSport = (typeof c === 'object' && c?.sport) ? c.sport : '';
         return {
           id: booking.id,
           userId: booking.user_id,
@@ -130,47 +159,89 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key`}
           totalPrice: parseFloat(booking.total_price),
           status: booking.status as BookingStatus,
           createdAt: booking.created_at,
-          court: {
-            id: booking.court?.id || '',
-            name: booking.court?.name || 'Unknown Court',
-            sport: booking.court?.sport || '',
-          },
+          court: { id: courtId, name: courtName, sport: courtSport },
           venue: {
-            id: venue?.id || '',
-            name: venue?.name || 'Unknown Venue',
-            address: venue?.address || '',
-            area: venue?.area || '',
+            id: venueId,
+            name: venueName,
+            address: venueAddress,
+            area: '',
+            location: venueAddress || undefined,
           },
+          venues: { name: venueName, address: venueAddress },
+          courts: c ? { venue_name: venueName, address: venueAddress } : undefined,
         };
       });
 
       setBookings(transformedBookings);
     } catch (error: any) {
-      console.error('Error loading bookings:', error);
-      setError(error.message || 'Failed to load bookings. Please try again.');
+      const msg = error?.message ?? (typeof error === 'string' ? error : 'Unknown error');
+      const details = error?.details ?? error?.hint ?? (error && typeof error === 'object' ? JSON.stringify(error) : '');
+      console.error('Error loading bookings:', msg, details, error);
+      setError(msg || 'Failed to load bookings. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancelBooking = async (bookingId: string) => {
-    if (!confirm('Are you sure you want to cancel this booking?')) {
+  const initiateCancel = (bookingId: string) => {
+    setBookingToCancel(bookingId);
+    setIsCancelModalOpen(true);
+  };
+
+  const handleConfirmCancel = async (overrideId?: string) => {
+    const bookingId = overrideId ?? id ?? bookingToCancel;
+    if (!bookingId) {
+      console.warn('handleConfirmCancel: bookingId is undefined');
       return;
     }
 
+    setIsCancelling(true);
+
     try {
-      const { error } = await supabase
+      // Update status to 'cancelled' (triggers vendor Realtime: bell notification + Cancellations tab)
+      const { data, error } = await supabase
         .from('bookings')
         .update({ status: 'cancelled' })
-        .eq('id', bookingId);
+        .eq('id', bookingId)
+        .select('id, status')
+        .maybeSingle();
 
       if (error) throw error;
+      const updatedStatus = (data as { status?: string } | null)?.status?.toLowerCase?.();
+      if (!data || updatedStatus !== 'cancelled') {
+        throw new Error(
+          'Booking could not be cancelled. Run Supabase migrations so users can cancel their own bookings (migration: 20260216000003_users_can_cancel_own_bookings.sql).'
+        );
+      }
 
-      // Reload bookings
+      lastFailedBookingIdRef.current = null;
+      setBookingToCancel(null);
+      // Only remove from Upcoming once the database confirms success (moves to Past)
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === bookingId ? { ...b, status: 'cancelled' as BookingStatus } : b
+        )
+      );
+      setIsCancelModalOpen(false);
       loadBookings();
-    } catch (error) {
-      console.error('Error cancelling booking:', error);
-      alert('Failed to cancel booking. Please try again.');
+    } catch (err) {
+      console.error('Full error:', err);
+      lastFailedBookingIdRef.current = bookingId;
+      setIsErrorModalOpen(true);
+      setIsCancelModalOpen(false);
+      // Do NOT remove from UI on error – booking stays in Upcoming
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const handleRetryCancel = () => {
+    setIsErrorModalOpen(false);
+    const idToRetry = lastFailedBookingIdRef.current ?? bookingToCancel;
+    if (idToRetry) {
+      handleConfirmCancel(idToRetry);
+    } else {
+      console.warn('Try Again: bookingId is undefined, cannot retry');
     }
   };
 
@@ -373,7 +444,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key`}
                       <div className="flex items-start justify-between mb-4">
                         <div>
                           <h3 className="text-xl font-bold text-gray-900 mb-1" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>
-                            {booking.venue.name}
+                            {booking.courts?.venue_name || 'Prestige pickle'}
                           </h3>
                           <p className="text-sm text-gray-600">{booking.court.name} - {formatSport(booking.court.sport)}</p>
                         </div>
@@ -416,7 +487,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key`}
                           <div>
                             <p className="text-xs text-gray-500">Location</p>
                             <p className="font-semibold" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>
-                              {booking.venue.area.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                              {booking.courts?.address || 'Address not found'}
                             </p>
                           </div>
                         </div>
@@ -436,7 +507,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key`}
                     {canCancel && (
                       <div className="lg:pl-6 lg:border-l border-gray-200">
                         <button
-                          onClick={() => handleCancelBooking(booking.id)}
+                          onClick={() => initiateCancel(booking.id)}
                           className="inline-flex items-center gap-2 px-6 py-3 bg-red-50 text-red-600 font-semibold rounded-full hover:bg-red-100 transition-colors border border-red-200"
                           style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
                         >
@@ -453,6 +524,63 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key`}
         )}
         </div>
       </div>
+      
+      <Dialog open={isCancelModalOpen} onOpenChange={setIsCancelModalOpen}>
+        <DialogContent className="bg-white rounded-3xl shadow-xl border-none max-w-md p-8 sm:p-10 [&>button]:hidden">
+          <DialogHeader className="text-center sm:text-center">
+            <DialogTitle className="text-2xl font-semibold text-slate-800 mb-2">
+              Cancel Booking?
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 text-sm">
+              Are you sure you want to cancel this booking? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-6">
+            <button
+              onClick={() => handleConfirmCancel()}
+              disabled={isCancelling}
+              className="w-full py-3.5 rounded-2xl bg-[#F3C5B5] text-white font-semibold text-base hover:opacity-90 transition-opacity disabled:opacity-70 disabled:pointer-events-none"
+            >
+              {isCancelling ? 'Cancelling...' : 'Yes, Cancel'}
+            </button>
+            <button
+              onClick={() => !isCancelling && setIsCancelModalOpen(false)}
+              disabled={isCancelling}
+              className="w-full py-3.5 rounded-2xl bg-slate-100 text-slate-700 font-semibold text-base hover:bg-slate-200 transition-colors disabled:opacity-70 disabled:pointer-events-none"
+            >
+              Keep Booking
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isErrorModalOpen} onOpenChange={setIsErrorModalOpen}>
+        <DialogContent className="bg-white rounded-3xl shadow-xl border-none max-w-md p-8 sm:p-10 [&>button]:hidden">
+          <DialogHeader className="text-center sm:text-center">
+            <DialogTitle className="text-2xl font-semibold text-slate-800 mb-2">
+              Cancellation Failed
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 text-sm">
+              We couldn&apos;t cancel your booking. Please try again.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-6">
+            <button
+              onClick={handleRetryCancel}
+              className="w-full py-3.5 rounded-2xl bg-[#F3C5B5] text-white font-semibold text-base hover:opacity-90 transition-opacity"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => setIsErrorModalOpen(false)}
+              className="w-full py-3.5 rounded-2xl bg-slate-100 text-slate-700 font-semibold text-base hover:bg-slate-200 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Footer />
     </main>
   );

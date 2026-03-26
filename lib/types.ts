@@ -54,11 +54,13 @@ export interface Court {
   name: string;
   sport: SportType;
   description?: string;
-  image?: string;
+  /** Supabase courts.image_url – array of image URLs (text[]) */
+  image_url?: string[] | null;
   hourlyRate: number; // in RM
   peakRate: number; // in RM
   isIndoor: boolean;
   displayOrder: number;
+  amenities?: string[];
 }
 
 export interface TimeSlot {
@@ -149,6 +151,18 @@ export const SPORT_INFO: Record<SportType, { label: string; icon: string; color:
   basketball: { label: 'Basketball', icon: 'basketball', color: '#F44336' },
   squash: { label: 'Squash', icon: 'racquet', color: '#607D8B' },
   football: { label: 'Football', icon: 'football', color: '#4CAF50' },
+};
+
+// Sport categories with local icon paths (Courtside-style)
+export const SPORTS_CATEGORIES: Record<SportType, { label: string; icon: string }> = {
+  pickleball: { label: 'Pickleball', icon: '/sports-icon/pickleball.png' },
+  padel: { label: 'Padel', icon: '/sports-icon/padel.png' },
+  tennis: { label: 'Tennis', icon: '/sports-icon/tennis.png' },
+  badminton: { label: 'Badminton', icon: '/sports-icon/badminton.png' },
+  futsal: { label: 'Futsal', icon: '/sports-icon/futsal.png' },
+  basketball: { label: 'Basketball', icon: '/sports-icon/basketball.png' },
+  squash: { label: 'Squash', icon: '/sports-icon/squash.png' },
+  football: { label: 'Football', icon: '/sports-icon/football.png' },
 };
 
 // Area display info

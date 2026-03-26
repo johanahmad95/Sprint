@@ -1,8 +1,12 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { SportType, SPORT_INFO } from '@/lib/types';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { LayoutGrid, ChevronLeft, ChevronRight } from 'lucide-react';
+import Image from 'next/image';
+import { SportType, SPORTS_CATEGORIES } from '@/lib/types';
+import { cn } from '@/lib/utils';
+
+const SCROLL_AMOUNT = 200;
 
 interface SportFilterProps {
   selectedSport: SportType | 'all';
@@ -10,77 +14,16 @@ interface SportFilterProps {
   availableSports?: SportType[];
 }
 
-// Sport icons mapping
-const SportIcons: Record<SportType | 'all', React.ReactNode> = {
-  all: null, // No icon for "all"
-  pickleball: (
-    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M8 8 L16 8 L15 16 L9 16 Z" />
-      <circle cx="12" cy="12" r="2.5" />
-    </svg>
-  ),
-  padel: (
-    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="4" y="5" width="16" height="14" rx="1" />
-      <circle cx="12" cy="12" r="3" />
-      <line x1="8" y1="12" x2="16" y2="12" />
-    </svg>
-  ),
-  tennis: (
-    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="8" fill="white" />
-      <path d="M12 4 L12 20 M4 12 L20 12" stroke="currentColor" strokeWidth="1" />
-    </svg>
-  ),
-  badminton: (
-    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
-      <path d="M12 3 L9 12 L12 20 L15 12 Z" />
-      <circle cx="12" cy="12" r="4" fill="white" />
-    </svg>
-  ),
-  futsal: (
-    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 2 L12 22 M2 12 L22 12" stroke="white" strokeWidth="1.5" />
-      <path d="M6.34 6.34 Q12 12 17.66 17.66" stroke="white" strokeWidth="1" fill="none" />
-      <path d="M17.66 6.34 Q12 12 6.34 17.66" stroke="white" strokeWidth="1" fill="none" />
-    </svg>
-  ),
-  basketball: (
-    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 2 L12 22 M2 12 L22 12" stroke="white" strokeWidth="1.5" />
-      <ellipse cx="12" cy="12" rx="8" ry="10" fill="none" stroke="white" strokeWidth="1" />
-    </svg>
-  ),
-  squash: (
-    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="5" y="7" width="14" height="10" rx="1" />
-      <circle cx="12" cy="12" r="3.5" />
-      <line x1="9" y1="12" x2="15" y2="12" />
-    </svg>
-  ),
-  football: (
-    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 2 L12 22 M2 12 L22 12" stroke="white" strokeWidth="1.5" />
-      <path d="M6.34 6.34 Q12 12 17.66 17.66" stroke="white" strokeWidth="1" fill="none" />
-      <path d="M17.66 6.34 Q12 12 6.34 17.66" stroke="white" strokeWidth="1" fill="none" />
-    </svg>
-  ),
-};
-
 const SportFilter = ({
   selectedSport,
   onSelectSport,
   availableSports,
 }: SportFilterProps) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [failedIcons, setFailedIcons] = useState<Set<string>>(new Set());
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Priority order: Pickleball and Padel first, exclude 'all'
   const sportOrder: SportType[] = [
     'pickleball',
     'padel',
@@ -92,104 +35,161 @@ const SportFilter = ({
     'squash',
   ];
 
-  const filteredSports = availableSports
-    ? sportOrder.filter(s => availableSports.includes(s))
-    : sportOrder;
+  const filteredSports: (SportType | 'all')[] = [
+    'all',
+    ...(availableSports
+      ? sportOrder.filter((s) => availableSports.includes(s))
+      : sportOrder),
+  ];
 
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const scrollAmount = 200;
-      scrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
-    }
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const threshold = 2;
+    setCanScrollLeft(scrollLeft > threshold);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - threshold);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateScrollState();
+    el.addEventListener('scroll', updateScrollState);
+    const resizeObserver = new ResizeObserver(updateScrollState);
+    resizeObserver.observe(el);
+    return () => {
+      el.removeEventListener('scroll', updateScrollState);
+      resizeObserver.disconnect();
+    };
+  }, [updateScrollState, filteredSports.length]);
+
+  const scrollPrevious = () => {
+    scrollRef.current?.scrollBy({ left: -SCROLL_AMOUNT, behavior: 'smooth' });
+    setTimeout(updateScrollState, 350);
   };
 
-  const checkScrollButtons = () => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
-    }
+  const scrollNext = () => {
+    scrollRef.current?.scrollBy({ left: SCROLL_AMOUNT, behavior: 'smooth' });
+    setTimeout(updateScrollState, 350);
+  };
+
+  const handleIconError = (sport: string) => {
+    setFailedIcons((prev) => new Set(prev).add(sport));
   };
 
   return (
-    <div className="relative flex items-center gap-2">
-      {/* Left scroll button */}
+    <div className="border-b border-gray-200 pb-2 relative">
+      {/* Mobile-only arrows */}
       <button
-        onClick={() => scroll('left')}
-        onMouseEnter={checkScrollButtons}
-        className={`
-          flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center
-          transition-all duration-200
-          ${canScrollLeft ? 'opacity-100 hover:bg-gray-200' : 'opacity-50 cursor-not-allowed'}
-        `}
+        type="button"
+        onClick={scrollPrevious}
         disabled={!canScrollLeft}
+        aria-label="Previous sports"
+        className={cn(
+          'md:hidden absolute left-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center',
+          'w-8 h-8 rounded-full bg-white shadow-md border border-gray-100',
+          'text-tomato hover:bg-gray-50 disabled:opacity-30 disabled:pointer-events-none',
+          'transition-opacity duration-200',
+        )}
       >
-        <ChevronLeft className="w-4 h-4 text-gray-600" />
+        <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
+      </button>
+      <button
+        type="button"
+        onClick={scrollNext}
+        disabled={!canScrollRight}
+        aria-label="Next sports"
+        className={cn(
+          'md:hidden absolute right-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center',
+          'w-8 h-8 rounded-full bg-white shadow-md border border-gray-100',
+          'text-tomato hover:bg-gray-50 disabled:opacity-30 disabled:pointer-events-none',
+          'transition-opacity duration-200',
+        )}
+      >
+        <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
       </button>
 
-      {/* Scrollable sport list */}
       <div
         ref={scrollRef}
-        onScroll={checkScrollButtons}
-        className="flex gap-6 overflow-x-auto px-2 scrollbar-hide"
+        className="overflow-x-auto scrollbar-hide px-12 md:px-4 lg:px-8"
       >
+        <div className="flex justify-start md:justify-center gap-6 md:gap-8 min-w-max w-full whitespace-nowrap">
         {filteredSports.map((sport) => {
           const isActive = selectedSport === sport;
-          const label = SPORT_INFO[sport].label;
+          const isAll = sport === 'all';
+          const label = isAll ? 'All' : SPORTS_CATEGORIES[sport as SportType].label;
+          const iconFailed = !isAll && failedIcons.has(sport);
 
           return (
             <button
               key={sport}
               onClick={() => onSelectSport(sport)}
-              className="relative flex flex-col items-center gap-2 flex-shrink-0 pb-2 transition-all duration-200 min-w-[70px]"
+              className={cn(
+                'group relative flex flex-col items-center gap-1.5 md:gap-2 min-w-[56px] md:min-w-[64px] py-2 transition-all duration-200 flex-shrink-0',
+              )}
             >
-              {/* Icon */}
+              {/* Icon - slightly smaller on mobile */}
               <div
-                className={`
-                  flex items-center justify-center
-                  transition-colors duration-200
-                  ${isActive ? 'text-gray-900' : 'text-gray-500'}
-                `}
+                className={cn(
+                  'flex items-center justify-center w-7 h-7 md:w-8 md:h-8 transition-transform duration-200',
+                  'group-hover:scale-110 group-focus-visible:scale-110',
+                  isActive && 'scale-110',
+                )}
               >
-                {SportIcons[sport]}
+                {isAll ? (
+                  <LayoutGrid
+                    className={cn(
+                      'w-5 h-5 md:w-6 md:h-6',
+                      isActive ? 'text-gray-900' : 'text-gray-400 group-hover:text-gray-600'
+                    )}
+                  />
+                ) : iconFailed ? (
+                  <span
+                    className={cn(
+                      'flex items-center justify-center w-7 h-7 md:w-8 md:h-8 rounded-full bg-gray-200 text-xs md:text-sm font-semibold text-gray-600',
+                      isActive && 'bg-gray-300 text-gray-800',
+                    )}
+                  >
+                    {label.charAt(0)}
+                  </span>
+                ) : (
+                  <Image
+                    src={SPORTS_CATEGORIES[sport as SportType].icon}
+                    alt={label}
+                    width={32}
+                    height={32}
+                    className="w-7 h-7 md:w-8 md:h-8 object-contain"
+                    onError={() => handleIconError(sport)}
+                  />
+                )}
               </div>
 
               {/* Label */}
               <span
-                className={`
-                  text-xs sm:text-sm font-medium transition-colors duration-200
-                  ${isActive ? 'text-gray-900' : 'text-gray-500'}
-                `}
+                className={cn(
+                  'block w-full text-[11px] md:text-xs text-center transition-colors duration-200',
+                  'text-gray-500 group-hover:text-gray-900',
+                  isActive && 'text-gray-900 font-medium',
+                )}
                 style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
               >
                 {label}
               </span>
 
-              {/* Active indicator - blue underline */}
-              {isActive && (
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-blue-600 rounded-full" />
-              )}
+              {/* Indicator line - responsive width, centered under icon */}
+              <div
+                className={cn(
+                  'absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-7 md:w-8 bg-gray-900 rounded-full',
+                  'transition-opacity duration-200',
+                  isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                )}
+              />
             </button>
           );
         })}
+        </div>
       </div>
-
-      {/* Right scroll button */}
-      <button
-        onClick={() => scroll('right')}
-        onMouseEnter={checkScrollButtons}
-        className={`
-          flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center
-          transition-all duration-200
-          ${canScrollRight ? 'opacity-100 hover:bg-gray-200' : 'opacity-50 cursor-not-allowed'}
-        `}
-        disabled={!canScrollRight}
-      >
-        <ChevronRight className="w-4 h-4 text-gray-600" />
-      </button>
     </div>
   );
 };

@@ -445,7 +445,7 @@ const AnimatedHeroBanner: React.FC = () => {
           0%, 90%, 100% { left: calc((100% / 3) * 2); top: calc((100% / 3) * 2); }
           2.5%, 12.5% { left: calc(100% / 3); top: calc((100% / 3) * 2); }
           15%, 25% { left: 0; top: calc((100% / 3) * 2); }
-          27.5%, 37.5% { left: 0; top: calc(100% / 3); }
+          27.5%, 37.5% { left: calc(100% / 3); top: calc(100% / 3); }
           40%, 50% { left: 0; top: 0; }
           52.5%, 62.5% { left: calc(100% / 3); top: 0; }
           65%, 75% { left: calc((100% / 3) * 2); top: 0; }
@@ -470,13 +470,15 @@ const AnimatedHeroBanner: React.FC = () => {
 
         /* Stats Bar */
         .stats-bar {
-          display: flex;
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
           gap: 30px;
           margin-top: 30px;
+          text-align: center;
         }
 
         .stat-item {
-          text-align: left;
+          text-align: center;
         }
 
         .stat-number {
@@ -536,6 +538,11 @@ const AnimatedHeroBanner: React.FC = () => {
           .stat-number { font-size: 24px; }
           .stats-bar { gap: 18px; margin-top: 20px; }
           .stat-label { font-size: 9px; }
+        }
+
+        @media screen and (max-width: 480px) {
+          .right-part { height: 240px; width: 240px; }
+          .box { font-size: 8px; padding: 6px; }
         }
       `}</style>
       
